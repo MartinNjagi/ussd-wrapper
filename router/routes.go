@@ -1,9 +1,7 @@
 package router
 
 import (
-	"database/sql"
 	"fmt"
-	"github.com/go-redis/redis/v8"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/mysql"
@@ -21,19 +19,8 @@ import (
 	"ussd-wrapper/connections"
 	"ussd-wrapper/controller"
 	"ussd-wrapper/library"
-	"ussd-wrapper/models"
 	"ussd-wrapper/queue"
 )
-
-type AppContext struct {
-	DB         *sql.DB
-	DBSlave    *sql.DB
-	Redis      *redis.Client
-	RabbitConn *models.RabbitMQConn
-	controller *controller.Controller
-}
-
-var App *AppContext
 
 func Init() error {
 	// 🟣 1. Tracer Setup

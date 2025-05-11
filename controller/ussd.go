@@ -27,7 +27,7 @@ func (ctl *Controller) HandleUSSD1(c echo.Context) error {
 
 	// Redis example
 	traceID := library.GetTraceID(ctx)
-	_ = ctl.Redis.Set(ctx, "trace:"+traceID, "some_value", 0).Err()
+	_ = library.SetRedisKeyWithExpiry(ctl.redis, "trace:"+traceID, "some_value", 0)
 
 	return c.String(http.StatusOK, "CON USSD ready with context.")
 }

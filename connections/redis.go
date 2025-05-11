@@ -2,7 +2,7 @@ package connections
 
 import (
 	"fmt"
-	"github.com/go-redis/redis/v8"
+	"github.com/go-redis/redis"
 	"os"
 	"strconv"
 	"time"

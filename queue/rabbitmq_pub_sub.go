@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"github.com/go-redis/redis"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"os"
 	"sort"
@@ -12,7 +13,6 @@ import (
 	"time"
 	"ussd-wrapper/connections"
 
-	"github.com/go-redis/redis/v8"
 	"github.com/sirupsen/logrus"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"

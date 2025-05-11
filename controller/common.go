@@ -3,7 +3,7 @@ package controller
 
 import (
 	"database/sql"
-	"github.com/go-redis/redis/v8"
+	"github.com/go-redis/redis"
 	"github.com/labstack/echo/v4"
 	"go.opentelemetry.io/otel/trace"
 	"ussd-wrapper/connections"

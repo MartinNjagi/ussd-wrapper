@@ -1,0 +1,38 @@
+services:
+  ussd-wrapper:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - base_url=localhost:8080
+      - scheme=http
+      - DB_HOST=mysql
+      - DB_USER=root
+      - DB_PASS=pass
+      - DB_NAME=ussd
+      - REDIS_ADDR=redis:6379
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+    depends_on:
+      - mysql
+      - redis
+      - rabbitmq
+
+  mysql:
+    image: mysql:8
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: pass
+      MYSQL_DATABASE: ussd
+    ports:
+      - "3306:3306"
+
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672" # Management UI
