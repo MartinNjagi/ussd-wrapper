@@ -1,0 +1,26 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "This API documents exposes all the available API endpoints for USSD Wrapper service",
+        "title": "USSD Wrapper Service API",
+        "termsOfService": "https://corvus-tech.com/terms",
+        "contact": {
+            "name": "API Support",
+            "url": "https://corvus-tech.com/contact-us",
+            "email": "tech@corvus-tech.com"
+        },
+        "license": {
+            "name": "Apache 2.0",
+            "url": "https://www.apache.org/licenses/LICENSE-2.0.html"
+        },
+        "version": "3.0"
+    },
+    "paths": {},
+    "securityDefinitions": {
+        "ApiKeyAuth": {
+            "type": "apiKey",
+            "name": "api-key",
+            "in": "header"
+        }
+    }
+}
