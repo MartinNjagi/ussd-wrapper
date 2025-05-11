@@ -1,0 +1,29 @@
+services:
+  ussd-wrapper:
+    build:
+      context: .
+    ports:
+      - "${APP_PORT}:${APP_PORT}"
+    environment:
+      RABBITMQ_USER: ${RABBITMQ_USER}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+      REDIS_HOST: ${REDIS_HOST}
+      BASE_URL: ${BASE_URL}
+      SCHEME: ${SCHEME}
+      database_username: ${database_username}
+      database_password: ${database_password}
+      database_name: ${database_name}
+      database_host: ${database_host}
+      database_host_read: ${database_host_read}
+      database_port: ${database_port}
+      database_idle_connection: ${database_idle_connection}
+      database_max_connection: ${database_max_connection}
+      database_connection_lifetime: ${database_connection_lifetime}
+    env_file:
+      - .env
+    networks:
+      - ussd-net
+
+networks:
+  ussd-net:
+    driver: bridge

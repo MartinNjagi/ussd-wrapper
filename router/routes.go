@@ -13,8 +13,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"path/filepath"
-	"runtime"
 	"time"
 	"ussd-wrapper/connections"
 	"ussd-wrapper/controller"
@@ -22,7 +20,7 @@ import (
 	"ussd-wrapper/queue"
 )
 
-func Init() error {
+func Init(rootPath string) error {
 	// 🟣 1. Tracer Setup
 	ctx, err := library.InitTracer()
 	if err != nil {
@@ -45,7 +43,7 @@ func Init() error {
 		logrus.Panic(err)
 	}
 
-	m, err := migrate.NewWithDatabaseInstance(fmt.Sprintf("file:///%s/migrations", GetRootPath()), "mysql", driver)
+	m, err := migrate.NewWithDatabaseInstance(fmt.Sprintf("file:///%s/migrations", rootPath), "mysql", driver)
 	if err != nil {
 
 		logrus.Errorf("migration setup error %s ", err.Error())
@@ -161,14 +159,6 @@ func Init() error {
 	// 🔄 9. Start Echo server
 	log.Println("✅ USSD Wrapper Server running on :8080")
 	return e.Start(":8080")
-}
-
-func GetRootPath() string {
-
-	_, b, _, _ := runtime.Caller(0)
-
-	// Root folder of this project
-	return filepath.Join(filepath.Dir(b), "./")
 }
 
 // Now we'll use the controller's RegisterRoutes method

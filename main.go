@@ -3,6 +3,8 @@ package main
 import (
 	"log"
 	"os"
+	"path/filepath"
+	"runtime"
 	"ussd-wrapper/docs"
 	"ussd-wrapper/router"
 )
@@ -30,7 +32,17 @@ func main() {
 	docs.SwaggerInfo.BasePath = "/"
 	docs.SwaggerInfo.Schemes = []string{os.Getenv("scheme")}
 
-	if err := router.Init(); err != nil {
+	rootPath := GetRootPath()
+
+	if err := router.Init(rootPath); err != nil {
 		log.Fatalf("Startup failed: %v", err)
 	}
+}
+
+func GetRootPath() string {
+
+	_, b, _, _ := runtime.Caller(0)
+
+	// Root folder of this project
+	return filepath.Join(filepath.Dir(b), "./")
 }
