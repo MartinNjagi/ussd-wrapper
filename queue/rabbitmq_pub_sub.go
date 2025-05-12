@@ -12,6 +12,7 @@ import (
 	"sync/atomic"
 	"time"
 	"ussd-wrapper/connections"
+	"ussd-wrapper/library/logger"
 
 	"github.com/sirupsen/logrus"
 	"go.opentelemetry.io/otel/attribute"
@@ -20,8 +21,8 @@ import (
 	"ussd-wrapper/constants"
 )
 
-// QueueManager manages multiple RabbitMQ consumers
-type QueueManager struct {
+// Manager manages multiple RabbitMQ consumers
+type Manager struct {
 	DB           *sql.DB
 	DBSlave      *sql.DB
 	Tracer       trace.Tracer
@@ -33,14 +34,14 @@ type QueueManager struct {
 }
 
 // NewQueueManager creates a new queue manager instance
-func NewQueueManager(tracer trace.Tracer, db *sql.DB, dbSlave *sql.DB, redis *redis.Client) (*QueueManager, error) {
+func NewQueueManager(tracer trace.Tracer, db *sql.DB, dbSlave *sql.DB, redis *redis.Client) (*Manager, error) {
 	// Get the RabbitMQ client
 	rabbitClient := connections.GetClient()
 	if rabbitClient == nil {
 		return nil, fmt.Errorf("failed to get RabbitMQ client")
 	}
 
-	return &QueueManager{
+	return &Manager{
 		DB:           db,
 		DBSlave:      dbSlave,
 		Tracer:       tracer,
@@ -50,7 +51,7 @@ func NewQueueManager(tracer trace.Tracer, db *sql.DB, dbSlave *sql.DB, redis *re
 }
 
 // InitializeQueues sets up all configured consumer queues
-func (qm *QueueManager) InitializeQueues(ctx context.Context) {
+func (qm *Manager) InitializeQueues(ctx context.Context) {
 	ctx, span := qm.Tracer.Start(ctx, "InitQueues")
 	defer span.End()
 
@@ -83,7 +84,7 @@ func (qm *QueueManager) InitializeQueues(ctx context.Context) {
 }
 
 // SetupQueue configures and starts a consumer for a specific queue
-func (qm *QueueManager) SetupQueue(ctx context.Context, queueName string) {
+func (qm *Manager) SetupQueue(ctx context.Context, queueName string) {
 	ctx, span := qm.Tracer.Start(ctx, "SetupQueue",
 		trace.WithAttributes(attribute.String("queueName", queueName)))
 	defer span.End()
@@ -94,17 +95,17 @@ func (qm *QueueManager) SetupQueue(ctx context.Context, queueName string) {
 	// Start consuming messages
 	deliveries, err := qm.RabbitClient.Consume(ctx, queueName, consumerName)
 	if err != nil {
-		logrus.WithContext(ctx).
-			WithFields(logrus.Fields{
+		logger.WithCtx(ctx).WithFields(
+			logrus.Fields{
 				constants.DESCRIPTION: "error setting up consumer",
 				constants.DATA:        queueName,
-			}).Panic(err.Error())
+			}).Panic()
 	}
 
 	// Update started counter
 	started := atomic.AddInt32(&qm.TotalStarted, 1)
 
-	logrus.WithContext(ctx).
+	logger.WithCtx(ctx).
 		WithFields(logrus.Fields{
 			"queue":         queueName,
 			"started_total": started,
@@ -121,7 +122,7 @@ func (qm *QueueManager) SetupQueue(ctx context.Context, queueName string) {
 }
 
 // processDeliveries handles incoming messages from a queue
-func (qm *QueueManager) processDeliveries(ctx context.Context, deliveries <-chan amqp.Delivery, queueName string) {
+func (qm *Manager) processDeliveries(ctx context.Context, deliveries <-chan amqp.Delivery, queueName string) {
 	for {
 		select {
 		case <-ctx.Done():
@@ -134,7 +135,7 @@ func (qm *QueueManager) processDeliveries(ctx context.Context, deliveries <-chan
 
 		case delivery, ok := <-deliveries:
 			if !ok {
-				logrus.WithContext(ctx).
+				logger.WithCtx(ctx).
 					WithFields(logrus.Fields{
 						"queue": queueName,
 					}).
@@ -144,7 +145,7 @@ func (qm *QueueManager) processDeliveries(ctx context.Context, deliveries <-chan
 				newCtx := context.Background() // Create a new context since the old one might be canceled
 				newDeliveries, err := qm.RabbitClient.Consume(newCtx, queueName, fmt.Sprintf("consumer-%s", queueName))
 				if err != nil {
-					logrus.WithContext(newCtx).
+					logger.WithCtx(newCtx).
 						WithFields(logrus.Fields{
 							constants.DESCRIPTION: "failed to reconnect consumer",
 							constants.DATA:        queueName,
@@ -163,7 +164,7 @@ func (qm *QueueManager) processDeliveries(ctx context.Context, deliveries <-chan
 			// Process the delivery
 			err := qm.RouteMessage(ctx, delivery, queueName)
 			if err != nil {
-				logrus.WithContext(ctx).
+				logger.WithCtx(ctx).
 					WithFields(logrus.Fields{
 						constants.DESCRIPTION: "error processing message",
 						constants.DATA:        queueName,
@@ -172,7 +173,7 @@ func (qm *QueueManager) processDeliveries(ctx context.Context, deliveries <-chan
 
 				// Nack the message to requeue it
 				if err := delivery.Nack(false, true); err != nil {
-					logrus.WithContext(ctx).
+					logger.WithCtx(ctx).
 						WithFields(logrus.Fields{
 							constants.DESCRIPTION: "failed to nack message",
 							constants.DATA:        queueName,
@@ -181,7 +182,7 @@ func (qm *QueueManager) processDeliveries(ctx context.Context, deliveries <-chan
 			} else {
 				// Ack the message
 				if err := delivery.Ack(false); err != nil {
-					logrus.WithContext(ctx).
+					logger.WithCtx(ctx).
 						WithFields(logrus.Fields{
 							constants.DESCRIPTION: "failed to ack message",
 							constants.DATA:        queueName,
@@ -193,7 +194,7 @@ func (qm *QueueManager) processDeliveries(ctx context.Context, deliveries <-chan
 }
 
 // RouteMessage determines how to process a message based on the queue name
-func (qm *QueueManager) RouteMessage(ctx context.Context, delivery amqp.Delivery, queue string) error {
+func (qm *Manager) RouteMessage(ctx context.Context, delivery amqp.Delivery, queue string) error {
 	ctx, span := qm.Tracer.Start(ctx, "RouteMessage",
 		trace.WithAttributes(attribute.String("queueName", queue)))
 	defer span.End()
@@ -232,7 +233,7 @@ func (qm *QueueManager) RouteMessage(ctx context.Context, delivery amqp.Delivery
 }
 
 // PublishMessage sends a message to a RabbitMQ queue
-func (qm *QueueManager) PublishMessage(ctx context.Context, queueName string, payload interface{}, priority uint8) error {
+func (qm *Manager) PublishMessage(ctx context.Context, queueName string, payload interface{}, priority uint8) error {
 	ctx, span := qm.Tracer.Start(ctx, "PublishMessage",
 		trace.WithAttributes(attribute.String("queueName", queueName)))
 	defer span.End()
@@ -246,25 +247,25 @@ func (qm *QueueManager) PublishMessage(ctx context.Context, queueName string, pa
 }
 
 // ProcessSettlement handles bet settlement messages
-func (qm *QueueManager) ProcessSettlement(ctx context.Context, deliveries <-chan amqp.Delivery, queue string) error {
+func (qm *Manager) ProcessSettlement(ctx context.Context, deliveries <-chan amqp.Delivery, queue string) error {
 	// Implementation would go here
 	return nil
 }
 
 // ProcessSettlementRollback handles bet settlement rollback messages
-func (qm *QueueManager) ProcessSettlementRollback(ctx context.Context, deliveries <-chan amqp.Delivery) error {
+func (qm *Manager) ProcessSettlementRollback(ctx context.Context, deliveries <-chan amqp.Delivery) error {
 	// Implementation would go here
 	return nil
 }
 
 // ProcessBetClosure handles bet closure messages
-func (qm *QueueManager) ProcessBetClosure(ctx context.Context, deliveries <-chan amqp.Delivery) error {
+func (qm *Manager) ProcessBetClosure(ctx context.Context, deliveries <-chan amqp.Delivery) error {
 	// Implementation would go here
 	return nil
 }
 
 // ProcessBetApproval handles bet approval messages
-func (qm *QueueManager) ProcessBetApproval(ctx context.Context, deliveries <-chan amqp.Delivery) error {
+func (qm *Manager) ProcessBetApproval(ctx context.Context, deliveries <-chan amqp.Delivery) error {
 	// Implementation would go here
 	return nil
 }

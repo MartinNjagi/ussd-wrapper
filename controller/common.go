@@ -30,7 +30,7 @@ func NewController(db *sql.DB, dbSlave *sql.DB, redis *redis.Client, rabbitConn 
 }
 
 // RegisterRoutes registers all application routes
-func (ctl *Controller) RegisterRoutes(e *echo.Echo) {
+func (ctl *Controller) RegisterRoutes1(e *echo.Echo) {
 	e.POST("/ussd/callback", ctl.HandleUSSD)
 	// Add more routes as needed, grouped by functionality:
 
@@ -42,4 +42,50 @@ func (ctl *Controller) RegisterRoutes(e *echo.Echo) {
 	// Example: API routes
 	// api := e.Group("/api")
 	// api.GET("/users", ctl.GetUsers)
+}
+
+// controller/common.go
+
+// RegisterRoutes registers all application routes
+func (ctl *Controller) RegisterRoutes(e *echo.Echo) {
+	// Main USSD callback handler - all USSD interactions go through here
+	e.POST("/ussd/callback", ctl.HandleUSSD)
+
+	// API routes with authentication middleware
+	//api := e.Group("/api", middleware.JWT([]byte(ctl.config.JWTSecret)))
+
+	// Admin routes
+	/*admin := api.Group("/admin")
+	admin.GET("/users", ctl.GetUsers)
+	admin.GET("/users/:id", ctl.GetUser)
+	admin.POST("/users", ctl.CreateUser)
+	admin.PUT("/users/:id", ctl.UpdateUser)
+	admin.DELETE("/users/:id", ctl.DeleteUser)*/
+
+	// Transaction management
+	/*admin.GET("/transactions", ctl.ListTransactions)
+	admin.GET("/transactions/:id", ctl.GetTransaction)
+	admin.PUT("/transactions/:id/status", ctl.UpdateTransactionStatus)*/
+
+	// System configuration
+	/*admin.GET("/config", ctl.GetSystemConfig)
+	admin.PUT("/config", ctl.UpdateSystemConfig)
+	admin.GET("/ussd-menus", ctl.GetUSSDMenus)
+	admin.PUT("/ussd-menus", ctl.UpdateUSSDMenus)*/
+
+	// Reporting
+	/*reports := api.Group("/reports")
+	reports.GET("/transactions", ctl.TransactionReport)
+	reports.GET("/users", ctl.UserReport)
+	reports.GET("/usage", ctl.UsageReport)
+	reports.GET("/revenue", ctl.RevenueReport)
+	reports.GET("/audit-logs", ctl.AuditLogReport)*/
+
+	// Webhooks for external service callbacks
+	/*hooks := e.Group("/webhooks")
+	hooks.POST("/payment-notification", ctl.PaymentNotification)
+	hooks.POST("/sms-delivery", ctl.SMSDeliveryStatus)*/
+
+	// Health check
+	//e.GET("/health", ctl.HealthCheck)
 }

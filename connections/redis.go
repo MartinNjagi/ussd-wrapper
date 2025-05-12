@@ -1,14 +1,16 @@
 package connections
 
 import (
+	"context"
 	"fmt"
 	"github.com/go-redis/redis"
 	"os"
 	"strconv"
 	"time"
+	"ussd-wrapper/library/logger"
 )
 
-func InitRedis() *redis.Client {
+func InitRedis(ctx context.Context) *redis.Client {
 
 	host := os.Getenv("redis_host")
 	port := os.Getenv("redis_port")
@@ -38,6 +40,6 @@ func InitRedis() *redis.Client {
 	}
 
 	client := redis.NewClient(&opts)
-
+	logger.WithCtx(ctx).Info("Redis Client Connected || Configured")
 	return client
 }

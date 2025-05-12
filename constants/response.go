@@ -9,3 +9,9 @@ const DataBindingError = "Error binding data %s "
 
 const DESCRIPTION = "description"
 const DATA = "data"
+
+// Constants for menu prefixes
+const (
+	RESPONSE_TYPE_CON = "CON" // Continues the session
+	RESPONSE_TYPE_END = "END" // Ends the session
+)

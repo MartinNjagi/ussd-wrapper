@@ -9,6 +9,7 @@ import (
 	"os"
 	"sync"
 	"time"
+	"ussd-wrapper/library/logger"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
@@ -68,7 +69,7 @@ func getEnvOrDefault(key, defaultValue string) string {
 
 // InitializeClient creates the shared RabbitMQ client instance
 // This should be called during application startup
-func InitializeClient() (*RabbitMQClient, error) {
+func InitializeClient(ctx context.Context) (*RabbitMQClient, error) {
 	clientMutex.Lock()
 	defer clientMutex.Unlock()
 
@@ -78,11 +79,11 @@ func InitializeClient() (*RabbitMQClient, error) {
 
 	// Use default configuration from environment variables
 	config := NewConfig()
-	return InitializeClientWithConfig(config)
+	return InitializeClientWithConfig(ctx, config)
 }
 
 // InitializeClientWithConfig creates the shared RabbitMQ client with custom config
-func InitializeClientWithConfig(config Config) (*RabbitMQClient, error) {
+func InitializeClientWithConfig(ctx context.Context, config Config) (*RabbitMQClient, error) {
 	clientMutex.Lock()
 	defer clientMutex.Unlock()
 
@@ -97,6 +98,7 @@ func InitializeClientWithConfig(config Config) (*RabbitMQClient, error) {
 
 	singleClient = client
 	initialized = true
+	logger.WithCtx(ctx).Info("RabbitMq Client Connected || Configured")
 
 	return singleClient, nil
 }

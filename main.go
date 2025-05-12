@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"ussd-wrapper/docs"
+	"ussd-wrapper/library/logger"
 	"ussd-wrapper/router"
 )
 
@@ -33,10 +34,21 @@ func main() {
 	docs.SwaggerInfo.Schemes = []string{os.Getenv("scheme")}
 
 	rootPath := GetRootPath()
+	// Ensure the logs directory exists
+	logDir := "logs"
+	if err := os.MkdirAll(logDir, 0755); err != nil {
+		log.Fatalf("failed to create log directory: %v", err)
+	}
+
+	// Setup logger
+	if err := logger.Setup(logDir); err != nil {
+		log.Fatalf("failed to set up logger: %v", err)
+	}
 
 	if err := router.Init(rootPath); err != nil {
 		log.Fatalf("Startup failed: %v", err)
 	}
+
 }
 
 func GetRootPath() string {

@@ -12,6 +12,7 @@ import (
 	echoSwagger "github.com/swaggo/echo-swagger"
 	"github.com/uptrace/opentelemetry-go-extra/otellogrus"
 	"log"
+	"ussd-wrapper/library/logger"
 
 	"net/http"
 	"os"
@@ -58,11 +59,11 @@ func Init(rootPath string) error {
 	}
 
 	// 🟢 3. Redis
-	redisClient := connections.InitRedis()
+	redisClient := connections.InitRedis(ctx)
 
 	// 🔵 4. RabbitMQ Connection
-	rabbitConn, err := connections.InitializeClient()
-	if err != nil {
+	rabbitConn, rmq_err := connections.InitializeClient(ctx)
+	if rmq_err != nil {
 		log.Fatalf("Failed to initialize RabbitMQ: %v", err)
 	}
 
@@ -169,6 +170,9 @@ func Init(rootPath string) error {
 
 	// 🔄 9. Start Echo server
 	log.Println("✅ USSD Wrapper Server running on :8080")
+
+	logger.WithCtx(ctx).Info("App started")
+
 	return e.Start(":8080")
 }
 

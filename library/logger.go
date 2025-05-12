@@ -3,8 +3,6 @@ package library
 import (
 	"context"
 	"fmt"
-	"github.com/labstack/echo/v4"
-
 	"github.com/sirupsen/logrus"
 	"go.opentelemetry.io/otel/trace"
 	"gopkg.in/natefinch/lumberjack.v2"
@@ -37,18 +35,4 @@ func LogWithTrace(ctx context.Context) *logrus.Entry {
 func GetTraceID(ctx context.Context) string {
 	spanCtx := trace.SpanContextFromContext(ctx)
 	return spanCtx.TraceID().String()
-}
-
-// Middleware for injecting context-aware logging
-func RequestLogger() echo.MiddlewareFunc {
-	return func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(c echo.Context) error {
-			req := c.Request()
-			log.WithFields(logrus.Fields{
-				"method": req.Method,
-				"uri":    req.RequestURI,
-			}).Info("Incoming request")
-			return next(c)
-		}
-	}
 }

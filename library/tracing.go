@@ -15,7 +15,10 @@ import (
 func InitTracer() (context.Context, error) {
 	ctx := context.Background()
 
-	exporter, err := otlptracehttp.New(ctx)
+	exporter, err := otlptracehttp.New(ctx,
+		otlptracehttp.WithEndpoint("otel-collector:4318"),
+		otlptracehttp.WithInsecure(),
+	)
 	if err != nil {
 		return ctx, err
 	}
