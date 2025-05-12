@@ -24,7 +24,7 @@ services:
     networks:
       - ussd-net
     volumes:
-      - ./logs:/var/log/myapp
+      - ./logs:/app/logs  # Now maps to where the app writes logs
 
 networks:
   ussd-net:
