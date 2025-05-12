@@ -5,8 +5,8 @@ services:
     ports:
       - "${APP_PORT}:${APP_PORT}"
     environment:
-      RABBITMQ_USER: ${RABBITMQ_USER}
-      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+      RABBITMQ_USER: ${rabbitmq_user}
+      RABBITMQ_PASSWORD: ${rabbitmq_pass}
       REDIS_HOST: ${REDIS_HOST}
       BASE_URL: ${BASE_URL}
       SCHEME: ${SCHEME}

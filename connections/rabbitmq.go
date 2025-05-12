@@ -5,13 +5,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	amqp "github.com/rabbitmq/amqp091-go"
 	"log"
 	"os"
+	"strings"
 	"sync"
 	"time"
 	"ussd-wrapper/library/logger"
-
-	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 // RabbitMQClient provides a unified interface for both publishing and consuming
@@ -73,34 +73,89 @@ func InitializeClient(ctx context.Context) (*RabbitMQClient, error) {
 	clientMutex.Lock()
 	defer clientMutex.Unlock()
 
+	log.Println("🔄 Init rmq client")
+
 	if initialized && singleClient != nil {
+		log.Println("✅ Already up rmq client")
 		return singleClient, nil
 	}
 
-	// Use default configuration from environment variables
 	config := NewConfig()
-	return InitializeClientWithConfig(ctx, config)
+
+	log.Println("📦 Config created for new rmq client")
+	log.Printf("📡 RabbitMQ URI: amqp://%s:***@%s:%s%s\n", config.User, config.Host, config.Port, config.VHost)
+
+	client, err := InitializeClientWithConfig(ctx, config)
+	if err != nil {
+		log.Printf("❌ Failed to initialize RMQ client: %v\n", err)
+		return nil, err
+	}
+
+	// This is redundant if InitializeClientWithConfig sets these values, but it's safer to have it here too
+	singleClient = client
+	initialized = true
+
+	log.Println("✅ RabbitMq Client Connected || Configured")
+	return client, nil
 }
 
 // InitializeClientWithConfig creates the shared RabbitMQ client with custom config
 func InitializeClientWithConfig(ctx context.Context, config Config) (*RabbitMQClient, error) {
-	clientMutex.Lock()
-	defer clientMutex.Unlock()
+	amqpURI := fmt.Sprintf("amqp://%s:%s@%s:%d%s", config.User, config.Password, config.Host, config.Port, config.VHost)
+	logger.WithCtx(ctx).Printf("🔗 Dialing RabbitMQ at %s\n", strings.Replace(amqpURI, config.Password, "***", 1))
 
-	if initialized && singleClient != nil {
-		return singleClient, nil
-	}
-
-	client, err := NewClientWithConfig(config)
+	client, err := NewRabbitMQClient(config)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Failed to initialize RabbitMQ client: %v", err)
 	}
 
+	// Set the global client and mark as initialized
 	singleClient = client
 	initialized = true
-	logger.WithCtx(ctx).Info("RabbitMq Client Connected || Configured")
 
-	return singleClient, nil
+	return client, nil
+}
+
+func NewRabbitMQClient(config Config) (*RabbitMQClient, error) {
+
+	connStr := fmt.Sprintf("amqp://%s:%s@%s:%s/%s",
+		config.User, config.Password, config.Host, config.Port, config.VHost)
+
+	conn, err := amqp.Dial(connStr)
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to RabbitMQ: %w", err)
+	}
+
+	client := &RabbitMQClient{
+		conn:      conn,
+		err:       make(chan error),
+		channels:  make(map[string]*amqp.Channel),
+		connected: true,
+	}
+
+	// Add both publisher and consumer channels
+	if err := client.AddChannel("publisher"); err != nil {
+		return nil, fmt.Errorf("failed to create publisher channel: %w", err)
+	}
+
+	if err := client.AddChannel("consumer"); err != nil {
+		return nil, fmt.Errorf("failed to create consumer channel: %w", err)
+	}
+
+	return client, nil
+}
+
+func (c *RabbitMQClient) AddChannel(name string) error {
+	c.channelMutex.Lock()
+	defer c.channelMutex.Unlock()
+
+	ch, err := c.conn.Channel()
+	if err != nil {
+		return err
+	}
+
+	c.channels[name] = ch
+	return nil
 }
 
 // GetClient returns the shared RabbitMQ client instance
@@ -110,9 +165,10 @@ func GetClient() *RabbitMQClient {
 	defer clientMutex.Unlock()
 
 	if !initialized || singleClient == nil {
+		log.Printf("GetClient: initialized=%v, singleClient is nil=%v",
+			initialized, singleClient == nil)
 		return nil
 	}
-
 	return singleClient
 }
 
@@ -162,6 +218,7 @@ func (c *RabbitMQClient) Connect(config Config) error {
 		config.User, config.Password, config.Host, config.Port, config.VHost)
 
 	conn, err := amqp.Dial(amqpURI)
+
 	if err != nil {
 		return fmt.Errorf("error connecting to RabbitMQ with %s: %w", amqpURI, err)
 	}

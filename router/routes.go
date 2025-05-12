@@ -62,15 +62,15 @@ func Init(rootPath string) error {
 	redisClient := connections.InitRedis(ctx)
 
 	// 🔵 4. RabbitMQ Connection
-	rabbitConn, rmq_err := connections.InitializeClient(ctx)
-	if rmq_err != nil {
+	rabbitConn, rmqErr := connections.InitializeClient(ctx)
+	if rmqErr != nil {
 		log.Fatalf("Failed to initialize RabbitMQ: %v", err)
 	}
 
 	// Create the queue manager
-	queueManager, err := queue.NewQueueManager(tracer, dbInstance, dbSlave, redisClient)
-	if err != nil {
-		log.Fatalf("Failed to create queue manager: %v", err)
+	queueManager, qMerr := queue.NewQueueManager(tracer, dbInstance, dbSlave, redisClient)
+	if qMerr != nil {
+		log.Fatalf("Failed to create queue manager: %v", qMerr)
 	}
 
 	// Start all consumers
