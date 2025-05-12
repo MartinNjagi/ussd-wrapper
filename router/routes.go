@@ -10,7 +10,9 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/sirupsen/logrus"
 	echoSwagger "github.com/swaggo/echo-swagger"
+	"github.com/uptrace/opentelemetry-go-extra/otellogrus"
 	"log"
+
 	"net/http"
 	"os"
 	"time"
@@ -138,7 +140,16 @@ func Init(rootPath string) error {
 			return nil
 		},
 	}))
-
+	// Instrument logrus.
+	logrus.AddHook(otellogrus.NewHook(otellogrus.WithLevels(
+		logrus.PanicLevel,
+		logrus.FatalLevel,
+		logrus.ErrorLevel,
+		logrus.WarnLevel,
+		logrus.InfoLevel,
+		logrus.DebugLevel,
+		logrus.TraceLevel,
+	)))
 	allowedMethods := []string{http.MethodGet, http.MethodHead, http.MethodPut, http.MethodPatch, http.MethodPost, http.MethodDelete, http.MethodOptions}
 	AllowOrigins := []string{"*"}
 

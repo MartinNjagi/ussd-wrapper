@@ -23,6 +23,8 @@ services:
       - .env
     networks:
       - ussd-net
+    volumes:
+      - ./logs:/var/log/myapp
 
 networks:
   ussd-net:
